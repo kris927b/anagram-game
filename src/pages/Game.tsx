@@ -1,6 +1,6 @@
 // src/pages/Game.tsx
 import { useState, useEffect } from "react";
-import { puzzles, Puzzle } from "../data/puzzles";
+import { puzzles, type Puzzle } from "../data/puzzles";
 import { canBeFormed } from "../utils/word-logic";
 
 // Helper function to get a random puzzle
