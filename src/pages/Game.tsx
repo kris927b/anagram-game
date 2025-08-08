@@ -1,6 +1,12 @@
 // src/pages/Game.tsx
 import { useState, useEffect } from "react";
-import { puzzle } from "../data/puzzle";
+import { puzzles, Puzzle } from "../data/puzzles";
+import { canBeFormed } from "../utils/word-logic";
+
+// Helper function to get a random puzzle
+const getRandomPuzzle = (): Puzzle => {
+  return puzzles[Math.floor(Math.random() * puzzles.length)];
+};
 
 // Helper function to shuffle an array
 function shuffleArray<T>(array: T[]): T[] {
@@ -8,6 +14,7 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 export default function Game() {
+  const [puzzle, setPuzzle] = useState<Puzzle>(getRandomPuzzle());
   const [input, setInput] = useState("");
   const [foundWords, setFoundWords] = useState<string[]>([]);
   const [score, setScore] = useState(0);
@@ -17,7 +24,7 @@ export default function Game() {
 
   useEffect(() => {
     setShuffledLetters(shuffleArray([...puzzle.baseWord]));
-  }, []);
+  }, [puzzle]);
 
   const handleShuffle = () => {
     setShuffledLetters(shuffleArray([...puzzle.baseWord]));
@@ -40,18 +47,6 @@ export default function Game() {
     setTimeout(() => setFeedback(null), 1500);
   };
 
-  const canBeFormed = (word: string, base: string): boolean => {
-    const baseChars = [...base];
-    for (const char of word) {
-      const index = baseChars.indexOf(char);
-      if (index === -1) {
-        return false; // Character not in base word
-      }
-      baseChars.splice(index, 1); // Use each character only once
-    }
-    return true;
-  };
-
   const calculateScore = (word: string): number => {
     const length = word.length;
     if (length === 3) return 5;
@@ -65,7 +60,11 @@ export default function Game() {
   const handleSubmit = () => {
     const guess = input.trim().toLowerCase();
 
-    if (guess.length === 0) return;
+    if (guess.length === 0) {
+      setFeedback("invalid");
+      setTimeout(() => setFeedback(null), 1500);
+      return;
+    }
 
     if (foundWords.includes(guess)) {
       setFeedback("duplicate");
@@ -99,20 +98,20 @@ export default function Game() {
   };
 
   const handlePlayAgain = () => {
+    setPuzzle(getRandomPuzzle());
     setFoundWords([]);
     setScore(0);
     setIsCompleted(false);
-    setShuffledLetters(shuffleArray([...puzzle.baseWord]));
   };
 
   return (
-    <main className="min-h-screen p-4 flex flex-col items-center gap-4 bg-gradient-to-b from-yellow-50 to-pink-100 text-gray-800">
+    <main className="min-h-screen p-2 sm:p-4 flex flex-col items-center gap-4 bg-gradient-to-b from-yellow-50 to-pink-100 text-gray-800">
       {isCompleted && (
-        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
-          <div className="bg-white p-8 rounded-lg shadow-lg text-center">
-            <h2 className="text-2xl font-bold mb-4">🎉 Congratulations! 🎉</h2>
-            <p className="text-lg mb-4">You found all the words!</p>
-            <p className="text-xl font-semibold mb-6">Final Score: {score}</p>
+        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10 p-4">
+          <div className="bg-white p-6 sm:p-8 rounded-lg shadow-lg text-center">
+            <h2 className="text-xl sm:text-2xl font-bold mb-4">🎉 Congratulations! 🎉</h2>
+            <p className="text-base sm:text-lg mb-4">You found all the words!</p>
+            <p className="text-lg sm:text-xl font-semibold mb-6">Final Score: {score}</p>
             <button
               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow"
               onClick={handlePlayAgain}
@@ -123,38 +122,43 @@ export default function Game() {
         </div>
       )}
 
-      <h1 className="text-3xl font-bold mt-4">🧩 Anagram Challenge</h1>
+      <h1 className="text-2xl sm:text-3xl font-bold mt-4 text-center">🧩 Anagram Challenge</h1>
 
-      <p className="text-xl">
+      <p id="letters-label" className="text-lg sm:text-xl text-center">
         Letters:{" "}
-        <span className="font-mono text-2xl tracking-widest">
+        <span aria-live="polite" className="font-mono text-xl sm:text-2xl tracking-widest">
           {shuffledLetters.join(" ").toUpperCase()}
         </span>
       </p>
 
       <input
-        className="border-2 p-2 rounded w-64 text-center text-lg shadow bg-white"
+        aria-labelledby="letters-label"
+        aria-description="Enter a word using the letters above"
+        className="border-2 p-2 rounded w-full max-w-xs sm:w-64 text-center text-lg shadow bg-white"
         type="text"
         placeholder="Enter a word"
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
       />
-      <div className="flex gap-2">
+      <div className="flex flex-wrap justify-center gap-2">
         <button
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow"
+          aria-label="Submit your word"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow w-24"
           onClick={handleSubmit}
         >
           Submit
         </button>
         <button
-          className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded shadow"
+          aria-label="Shuffle the letters"
+          className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded shadow w-24"
           onClick={handleShuffle}
         >
           Shuffle
         </button>
         <button
-          className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded shadow"
+          aria-label="Get a hint, costs 20 points"
+          className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded shadow w-24"
           onClick={handleHint}
         >
           Hint (-20)
@@ -162,7 +166,7 @@ export default function Game() {
       </div>
 
       {feedback && (
-        <p className={`text-lg font-semibold ${{
+        <p role="alert" className={`text-base sm:text-lg font-semibold ${{
           correct: "text-green-600",
           pangram: "text-purple-600",
           duplicate: "text-yellow-600",
@@ -179,11 +183,19 @@ export default function Game() {
         </p>
       )}
 
-      <div className="mt-6 w-full max-w-md">
-        <h2 className="text-lg font-semibold mb-2">
+      <div className="mt-4 w-full max-w-md">
+        <h2 id="found-words-label" className="text-base sm:text-lg font-semibold mb-2">
           Found Words ({foundWords.length} / {puzzle.validWords.length})
         </h2>
-        <ul className="bg-white rounded p-4 shadow min-h-[120px]">
+        <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+          <div
+            className="bg-blue-600 h-2.5 rounded-full"
+            style={{
+              width: `${(foundWords.length / puzzle.validWords.length) * 100}%`,
+            }}
+          ></div>
+        </div>
+        <ul aria-labelledby="found-words-label" className="bg-white rounded p-4 shadow min-h-[120px] mt-2 text-sm sm:text-base">
           {foundWords.length === 0 ? (
             <li className="text-gray-500 italic">No words found yet</li>
           ) : (
@@ -192,9 +204,9 @@ export default function Game() {
         </ul>
       </div>
 
-      <p className="text-lg mt-4 font-semibold">Score: {score}</p>
+      <p className="text-base sm:text-lg mt-4 font-semibold">Score: {score}</p>
 
-      <div className="mt-8 w-full max-w-md h-24 bg-gray-300 rounded flex items-center justify-center text-gray-700">
+      <div className="mt-6 w-full max-w-md h-24 bg-gray-300 rounded flex items-center justify-center text-gray-700">
         [Ad Banner Placeholder]
       </div>
     </main>
